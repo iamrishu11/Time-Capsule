@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Your Time Capsules</h2>
+
+{% if capsules %}
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Recipient</th>
+        <th>Subject</th>
+        <th>Delivery Time</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>View</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cap in capsules %}
+      <tr>
+        <td>{{ cap.id }}</td>
+        <td>{{ cap.recipient_email }}</td>
+        <td>{{ cap.subject }}</td>
+        <td>{{ cap.delivery_datetime }}</td>
+        <td>
+          {% if cap.status == "pending" %}
+            <span class="badge bg-warning text-dark">Pending</span>
+          {% else %}
+            <span class="badge bg-success">Sent</span>
+          {% endif %}
+        </td>
+        <td>{{ cap.created_at }}</td>
+        <td>
+          <a class="btn btn-sm btn-primary"
+             href="{{ url_for('view_capsule', capsule_id=cap.id) }}">
+            Open
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No capsules yet.
+    <a href="{{ url_for('create_capsule') }}">Create your first one</a>.
+  </p>
+{% endif %}
+{% endblock %}
