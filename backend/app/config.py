@@ -64,20 +64,9 @@ class ProductionConfig(BaseConfig):
     DEBUG = False
     SQLALCHEMY_ECHO = False
     
-    # In production, ensure these are set via environment variables
-    @property
-    def SECRET_KEY(self):
-        key = os.environ.get('SECRET_KEY')
-        if not key:
-            raise ValueError("SECRET_KEY must be set in production")
-        return key
-    
-    @property
-    def JWT_SECRET_KEY(self):
-        key = os.environ.get('JWT_SECRET_KEY')
-        if not key:
-            raise ValueError("JWT_SECRET_KEY must be set in production")
-        return key
+    # In production, read from environment variables (these override BaseConfig)
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-production-key-change-me')
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', os.environ.get('SECRET_KEY', 'fallback-jwt-key'))
 
 
 class TestingConfig(BaseConfig):
