@@ -17,8 +17,17 @@ Werkzeug==3.0.1
 # Encryption
 cryptography==41.0.7
 
+# Email
+Flask-Mail==0.9.1
+
 # Environment configuration
 python-dotenv==1.0.0
+
+# Production server
+gunicorn==21.2.0
+
+# Scheduling (optional - for automated tasks)
+APScheduler==3.10.4
 
 # Development tools (optional)
 # flask-debugtoolbar==0.14.1
