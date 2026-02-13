@@ -10,7 +10,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from app.config import DevelopmentConfig
-from app.extensions import db, migrate
+from app.extensions import db, migrate, mail
 
 
 def create_app(config_class=DevelopmentConfig):
@@ -39,11 +39,16 @@ def create_app(config_class=DevelopmentConfig):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    mail.init_app(app)
     
-    # Enable CORS for frontend development servers
+    # Get allowed origins from config
+    frontend_urls = app.config.get('FRONTEND_URLS', 'http://localhost:3000,http://localhost:5173')
+    allowed_origins = [url.strip() for url in frontend_urls.split(',')]
+    
+    # Enable CORS for frontend development and production servers
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:3000", "http://localhost:5173"],
+            "origins": allowed_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
