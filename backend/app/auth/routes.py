@@ -74,6 +74,15 @@ def register():
         # Generate token for immediate login after registration
         access_token = generate_token(user)
         
+        # Send welcome email (async, won't block registration)
+        try:
+            from app.services.email_service import send_welcome_email
+            send_welcome_email(user)
+        except Exception as email_error:
+            # Don't fail registration if email fails
+            import logging
+            logging.warning(f"Failed to send welcome email: {email_error}")
+        
         return jsonify({
             'message': 'User registered successfully',
             'access_token': access_token,
