@@ -127,6 +127,8 @@ a:hover {
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-dark);
+  color: white;
+  text-decoration: none;
 }
 
 .btn-secondary {
@@ -136,6 +138,7 @@ a:hover {
 
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-secondary-dark);
+  color: white;
 }
 
 .btn-outline {

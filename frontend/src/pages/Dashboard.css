@@ -35,6 +35,12 @@
 .header-actions {
   display: flex;
   gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.header-actions .btn {
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .dashboard-content {
@@ -98,9 +104,12 @@
 }
 
 .action-card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  color: var(--color-primary);
+}
+
+.action-card.btn:hover,
+.action-card .btn:hover {
+  color: white;
 }
 
 .action-icon {
