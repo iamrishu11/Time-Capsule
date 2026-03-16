@@ -66,11 +66,13 @@ def create_app(config_class=DevelopmentConfig):
     from app.main.routes import main_bp
     from app.recipients import recipients_bp
     from app.capsules import capsules_bp
-    
+    from app.guardians import guardians_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(main_bp, url_prefix='/api')
     app.register_blueprint(recipients_bp, url_prefix='/api/recipients')
     app.register_blueprint(capsules_bp, url_prefix='/api/capsules')
+    app.register_blueprint(guardians_bp, url_prefix='/api/guardian')
     
     # Shell context for flask shell
     @app.shell_context_processor
