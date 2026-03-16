@@ -149,6 +149,7 @@ class Guardian(db.Model):
     # Relationships
     owner = db.relationship("User", back_populates="guardians")
     capsules = db.relationship("CapsuleGuardian", back_populates="guardian", cascade="all, delete-orphan")
+    verification_requests = db.relationship("GuardianVerificationRequest", back_populates="guardian", cascade="all, delete-orphan")
     
     def to_dict(self):
         """Convert guardian to dictionary."""
@@ -213,6 +214,7 @@ class Capsule(db.Model):
     guardians = db.relationship("CapsuleGuardian", back_populates="capsule", cascade="all, delete-orphan")
     attachments = db.relationship("Attachment", back_populates="capsule", cascade="all, delete-orphan")
     delivery_logs = db.relationship("DeliveryLog", back_populates="capsule", cascade="all, delete-orphan")
+    guardian_verification_requests = db.relationship("GuardianVerificationRequest", back_populates="capsule", cascade="all, delete-orphan")
     
     # Indexes for optimizing scheduling queries
     __table_args__ = (
@@ -391,6 +393,67 @@ class DeliveryLog(db.Model):
     
     def __repr__(self):
         return f'<DeliveryLog {self.id}: capsule={self.capsule_id} status={self.status}>'
+
+
+class GuardianVerificationRequest(db.Model):
+    """
+    GuardianVerificationRequest model for the guardian verification portal.
+
+    When a capsule with requires_guardian=True is triggered for release,
+    a unique tokenised verification request is sent to each linked guardian.
+    Guardians confirm or deny the release through a public web portal.
+
+    Attributes:
+        id: Primary key
+        capsule_id: The capsule awaiting verification
+        guardian_id: The guardian being asked to verify
+        token: Unique URL-safe token included in the email link
+        status: PENDING, CONFIRMED, DENIED, or EXPIRED
+        sent_at: When the verification email was sent
+        responded_at: When the guardian submitted their decision
+        response_notes: Optional free-text note from the guardian
+        ip_address: IP address of the guardian at response time (audit)
+    """
+    __tablename__ = "guardian_verification_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    capsule_id = db.Column(db.Integer, db.ForeignKey("capsules.id", ondelete="CASCADE"), nullable=False)
+    guardian_id = db.Column(db.Integer, db.ForeignKey("guardians.id", ondelete="CASCADE"), nullable=False)
+
+    token = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, default="PENDING")  # PENDING, CONFIRMED, DENIED, EXPIRED
+
+    sent_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    responded_at = db.Column(db.DateTime, nullable=True)
+    response_notes = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv6 max 45 chars
+
+    # Relationships
+    capsule = db.relationship("Capsule", back_populates="guardian_verification_requests")
+    guardian = db.relationship("Guardian", back_populates="verification_requests")
+
+    __table_args__ = (
+        db.Index("ix_guardian_req_token", "token"),
+        db.Index("ix_guardian_req_capsule_status", "capsule_id", "status"),
+    )
+
+    def to_dict(self):
+        """Convert to dictionary for API responses."""
+        return {
+            'id': self.id,
+            'capsule_id': self.capsule_id,
+            'guardian_id': self.guardian_id,
+            'guardian_name': self.guardian.name if self.guardian else None,
+            'guardian_email': self.guardian.email if self.guardian else None,
+            'status': self.status,
+            'sent_at': self.sent_at.isoformat() if self.sent_at else None,
+            'responded_at': self.responded_at.isoformat() if self.responded_at else None,
+            'response_notes': self.response_notes,
+            'ip_address': self.ip_address,
+        }
+
+    def __repr__(self):
+        return f'<GuardianVerificationRequest {self.id}: capsule={self.capsule_id} status={self.status}>'
 
 
 class HeartbeatCheck(db.Model):
