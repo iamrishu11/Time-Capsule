@@ -13,12 +13,12 @@ from werkzeug.utils import secure_filename
 from app.capsules import capsules_bp
 from app.auth.utils import token_required
 from app.extensions import db
-from app.models import Capsule, Recipient, CapsuleRecipient, Attachment
+from app.models import Capsule, Recipient, CapsuleRecipient, Attachment, Guardian, GuardianVerificationRequest
 from app.security.encryption import encrypt_text, decrypt_text
 
 
 # Allowed file extensions for attachments
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'mp4', 'mp3', 'wav'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'mp4', 'mp3', 'wav', 'webm'}
 
 
 def allowed_file(filename):
@@ -260,7 +260,22 @@ def get_capsule(capsule_id):
             'size_bytes': att.size_bytes,
             'created_at': att.created_at.isoformat()
         })
-    
+
+    # Get guardians
+    guardians = []
+    for cg in capsule.guardians:
+        guardians.append({
+            'id': cg.guardian.id,
+            'name': cg.guardian.name,
+            'email': cg.guardian.email,
+            'relation': cg.guardian.relation
+        })
+
+    # Summarise guardian verification requests (latest per guardian)
+    verification_requests = []
+    for vr in capsule.guardian_verification_requests:
+        verification_requests.append(vr.to_dict())
+
     return jsonify({
         'id': capsule.id,
         'title': capsule.title,
@@ -270,6 +285,8 @@ def get_capsule(capsule_id):
         'release_at': capsule.release_at.isoformat() if capsule.release_at else None,
         'requires_guardian': capsule.requires_guardian,
         'recipients': recipients,
+        'guardians': guardians,
+        'guardian_verification_requests': verification_requests,
         'attachments': attachments,
         'created_at': capsule.created_at.isoformat(),
         'updated_at': capsule.updated_at.isoformat()
@@ -703,3 +720,122 @@ def delete_attachment(capsule_id, attachment_id):
             'error': 'Server error',
             'message': 'Failed to delete attachment'
         }), 500
+
+
+# ============================================================
+# GUARDIAN VERIFICATION ENDPOINTS
+# ============================================================
+
+@capsules_bp.route('/<int:capsule_id>/request-guardian-verification', methods=['POST'])
+@token_required
+def request_guardian_verification(capsule_id):
+    """
+    Send guardian verification request emails for a capsule.
+
+    Creates a GuardianVerificationRequest record (with a unique token) for
+    each guardian linked to the capsule, then sends each guardian an email
+    containing a tokenised confirm/deny link.
+
+    Only guardians without an active PENDING request receive a new email.
+
+    Returns:
+        200 — emails sent
+        400 — capsule does not require guardian or has no guardians
+        403 — not the capsule owner
+        404 — capsule not found
+    """
+    import secrets as _secrets
+
+    capsule = Capsule.query.get(capsule_id)
+    if not capsule:
+        return jsonify({'error': 'Not found', 'message': 'Capsule not found'}), 404
+
+    if capsule.owner_id != g.current_user.id:
+        return jsonify({'error': 'Forbidden', 'message': 'You do not own this capsule'}), 403
+
+    if not capsule.requires_guardian:
+        return jsonify({
+            'error': 'Bad request',
+            'message': 'This capsule does not require guardian verification'
+        }), 400
+
+    if not capsule.guardians:
+        return jsonify({
+            'error': 'Bad request',
+            'message': 'No guardians are assigned to this capsule'
+        }), 400
+
+    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+    from app.services.email_service import send_guardian_verification_email
+
+    notified = []
+    for cg in capsule.guardians:
+        # Skip if there is already an unresolved PENDING request for this guardian
+        existing = GuardianVerificationRequest.query.filter_by(
+            capsule_id=capsule_id,
+            guardian_id=cg.guardian_id,
+            status='PENDING'
+        ).first()
+        if existing:
+            continue
+
+        token = _secrets.token_urlsafe(48)
+        verify_url = f"{frontend_url}/guardian/verify/{token}"
+
+        vr = GuardianVerificationRequest(
+            capsule_id=capsule_id,
+            guardian_id=cg.guardian_id,
+            token=token,
+            status='PENDING'
+        )
+        db.session.add(vr)
+        db.session.flush()
+
+        send_guardian_verification_email(cg.guardian, capsule, verify_url)
+        notified.append(cg.guardian.name)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to create guardian verification requests: {e}")
+        return jsonify({'error': 'Server error', 'message': 'Failed to send verification requests'}), 500
+
+    if not notified:
+        return jsonify({
+            'message': 'All guardians already have a pending verification request.',
+            'guardians_notified': []
+        }), 200
+
+    return jsonify({
+        'message': f'Verification request sent to {len(notified)} guardian(s).',
+        'guardians_notified': notified
+    }), 200
+
+
+@capsules_bp.route('/<int:capsule_id>/guardian-verifications', methods=['GET'])
+@token_required
+def get_guardian_verifications(capsule_id):
+    """
+    Retrieve the full audit log of guardian verification requests for a capsule.
+
+    Returns:
+        200 — list of verification requests ordered by sent_at descending
+        403 — not the capsule owner
+        404 — capsule not found
+    """
+    capsule = Capsule.query.get(capsule_id)
+    if not capsule:
+        return jsonify({'error': 'Not found', 'message': 'Capsule not found'}), 404
+
+    if capsule.owner_id != g.current_user.id:
+        return jsonify({'error': 'Forbidden', 'message': 'You do not own this capsule'}), 403
+
+    requests = (
+        GuardianVerificationRequest.query
+        .filter_by(capsule_id=capsule_id)
+        .order_by(GuardianVerificationRequest.sent_at.desc())
+        .all()
+    )
+
+    return jsonify([r.to_dict() for r in requests]), 200
