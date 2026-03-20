@@ -1,0 +1,144 @@
+/* ============================================================
+   VideoRecorder component styles
+   ============================================================ */
+
+.vr-wrapper {
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.vr-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0f3ff;
+  border-bottom: 1px solid #e0e4f5;
+}
+
+.vr-icon  { font-size: 18px; }
+.vr-title { font-weight: 600; color: #374151; font-size: 14px; }
+
+.vr-error {
+  margin: 0;
+  padding: 10px 16px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 13px;
+  border-bottom: 1px solid #fecaca;
+}
+
+/* ── States ── */
+.vr-idle,
+.vr-recording,
+.vr-preview {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.vr-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: left;
+  width: 100%;
+}
+
+.vr-hint--center { text-align: center; }
+
+/* ── Video element ── */
+.vr-live-container {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+}
+
+.vr-video {
+  width: 100%;
+  max-height: 300px;
+  display: block;
+  border-radius: 8px;
+  background: #111;
+}
+
+/* REC badge */
+.vr-rec-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+.vr-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: vr-pulse 1s ease-in-out infinite;
+}
+
+@keyframes vr-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ── Buttons ── */
+.vr-btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.vr-btn:active { transform: scale(0.97); }
+
+.vr-btn--start {
+  background: #667eea;
+  color: #fff;
+}
+.vr-btn--start:hover { background: #5a6fd6; }
+
+.vr-btn--stop {
+  background: #ef4444;
+  color: #fff;
+}
+.vr-btn--stop:hover { background: #dc2626; }
+
+.vr-preview-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.vr-btn--discard {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+.vr-btn--discard:hover { background: #e5e7eb; }
+
+.vr-btn--accept {
+  background: #22c55e;
+  color: #fff;
+}
+.vr-btn--accept:hover { background: #16a34a; }
