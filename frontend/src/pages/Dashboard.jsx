@@ -43,12 +43,12 @@ function Dashboard() {
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'PENDING':
+      case 'DRAFT':
+        return 'badge-secondary';
+      case 'SCHEDULED':
         return 'badge-warning';
-      case 'RELEASED':
+      case 'SENT':
         return 'badge-success';
-      case 'DELIVERED':
-        return 'badge-info';
       case 'CANCELLED':
         return 'badge-error';
       default:
@@ -58,18 +58,22 @@ function Dashboard() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Append 'Z' if missing to treat as UTC, then convert to local time
+    const utcDate = dateString.endsWith('Z') ? dateString : dateString + 'Z';
+    return new Date(utcDate).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
-  // Calculate stats
+  // Calculate stats - using actual backend statuses: DRAFT, SCHEDULED, SENT, CANCELLED
   const stats = {
     total: capsules.length,
-    pending: capsules.filter((c) => c.status === 'PENDING').length,
-    delivered: capsules.filter((c) => c.status === 'DELIVERED').length,
+    pending: capsules.filter((c) => c.status === 'SCHEDULED').length,
+    delivered: capsules.filter((c) => c.status === 'SENT').length,
     recipients: recipients.length,
   };
 
