@@ -229,6 +229,11 @@
   color: #92400e;
 }
 
+.badge-secondary {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
 .badge-success {
   background-color: #d1fae5;
   color: #065f46;
