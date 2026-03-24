@@ -43,3 +43,6 @@ coverage/
 # Misc
 *.log
 .eslintcache
+
+# Research/Documentation
+paper/
