@@ -112,3 +112,34 @@ def delivery_stats():
             'error': 'Server error',
             'message': str(e)
         }), 500
+
+
+@main_bp.route('/process-capsules', methods=['POST'])
+@token_required
+def process_capsules():
+    """
+    Manually trigger processing of scheduled capsules.
+    Useful for testing or when automatic scheduler is not running.
+    
+    Requires: Authorization header with Bearer token
+    
+    Returns:
+        200: Processing results
+    """
+    from app.services.scheduler_service import process_scheduled_capsules
+    
+    try:
+        result = process_scheduled_capsules()
+        return jsonify({
+            'message': 'Capsule processing completed',
+            'processed': result['processed'],
+            'delivered': result['delivered'],
+            'failed': result['failed'],
+            'errors': result.get('errors', [])
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Process capsules error: {e}")
+        return jsonify({
+            'error': 'Server error',
+            'message': str(e)
+        }), 500
