@@ -76,6 +76,12 @@
 .hero-cta .btn {
   padding: var(--spacing-md) var(--spacing-xl);
   font-size: var(--font-size-lg);
+  white-space: nowrap;
+}
+
+.hero-cta .btn-primary:hover,
+.hero-cta .btn-secondary:hover {
+  color: white;
 }
 
 /* Responsive home page */
