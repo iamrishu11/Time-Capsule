@@ -369,6 +369,129 @@
   cursor: not-allowed;
 }
 
+/* Alert variants */
+.alert-success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.alert-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+/* Section header with multiple action buttons */
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Guardian verification section */
+.guardian-section {
+  margin-top: var(--spacing-lg);
+}
+
+.guardian-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.guardian-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.guardian-item-name {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.guardian-item-email {
+  color: var(--color-text-light);
+}
+
+/* Guardian audit log */
+.guardian-audit {
+  margin-top: var(--spacing-md);
+}
+
+.guardian-audit-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.guardian-audit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.guardian-audit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.guardian-audit-name {
+  font-weight: 500;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.guardian-audit-email {
+  color: var(--color-text-light);
+  font-size: var(--font-size-xs);
+}
+
+.guardian-audit-date {
+  color: var(--color-text-light);
+  font-size: var(--font-size-xs);
+}
+
+.guardian-audit-notes {
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* Video ready notice in attachments */
+.video-ready-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: #065f46;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .capsule-detail-page {

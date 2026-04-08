@@ -116,6 +116,32 @@ export const deleteAttachment = async (capsuleId, attachmentId) => {
   return response.data;
 };
 
+// ─────────────────────────────────────────────
+// Guardian verification — owner-side (authenticated)
+// ─────────────────────────────────────────────
+
+/**
+ * Send guardian verification request emails for a capsule.
+ * @param {number} capsuleId
+ */
+export const requestGuardianVerification = async (capsuleId) => {
+  const response = await apiClient.post(
+    `/api/capsules/${capsuleId}/request-guardian-verification`
+  );
+  return response.data;
+};
+
+/**
+ * Fetch full audit log of guardian verification requests for a capsule.
+ * @param {number} capsuleId
+ */
+export const getGuardianVerifications = async (capsuleId) => {
+  const response = await apiClient.get(
+    `/api/capsules/${capsuleId}/guardian-verifications`
+  );
+  return response.data;
+};
+
 export default {
   createCapsule,
   getCapsules,
@@ -125,4 +151,6 @@ export default {
   uploadAttachment,
   getAttachments,
   deleteAttachment,
+  requestGuardianVerification,
+  getGuardianVerifications,
 };

@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Recipients from './pages/Recipients.jsx'
 import CreateCapsule from './pages/CreateCapsule.jsx'
 import CapsuleDetail from './pages/CapsuleDetail.jsx'
+import GuardianVerify from './pages/GuardianVerify.jsx'
 import './App.css'
 
 /**
@@ -26,6 +27,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/guardian/verify/:token" element={<GuardianVerify />} />
           
           {/* Protected Routes */}
           <Route 

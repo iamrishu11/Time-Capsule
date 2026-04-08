@@ -238,6 +238,78 @@ def process_heartbeat_checks():
     return summary
 
 
+def deliver_capsule_now(capsule_id):
+    """
+    Immediately deliver a specific capsule regardless of its scheduled release time.
+
+    Called when guardian verification is completed (all guardians confirmed) so
+    the capsule is delivered without waiting for the next scheduler cycle.
+
+    Args:
+        capsule_id: ID of the capsule to deliver
+
+    Returns:
+        dict: { 'success': bool, 'delivered': int, 'failed': int }
+    """
+    result = {'success': False, 'delivered': 0, 'failed': 0}
+
+    capsule = Capsule.query.get(capsule_id)
+    if not capsule:
+        current_app.logger.error(f"deliver_capsule_now: capsule {capsule_id} not found")
+        return result
+
+    if capsule.status not in ('SCHEDULED', 'DRAFT'):
+        current_app.logger.warning(
+            f"deliver_capsule_now: capsule {capsule_id} has status {capsule.status}, skipping"
+        )
+        return result
+
+    try:
+        decrypted_message = decrypt_text(capsule.message_encrypted)
+    except Exception as e:
+        current_app.logger.error(f"deliver_capsule_now: decryption failed for capsule {capsule_id}: {e}")
+        return result
+
+    now = datetime.utcnow()
+    delivery_success = True
+
+    for cr in capsule.recipients:
+        recipient = cr.recipient
+        delivery_log = DeliveryLog(
+            capsule_id=capsule.id,
+            recipient_id=recipient.id,
+            scheduled_for=capsule.release_at or now,
+            status='PENDING'
+        )
+        db.session.add(delivery_log)
+
+        if send_capsule_delivery_email(capsule, recipient, decrypted_message):
+            delivery_log.status = 'SENT'
+            delivery_log.delivered_at = now
+            result['delivered'] += 1
+        else:
+            delivery_log.status = 'FAILED'
+            delivery_log.error_message = 'Failed to send email'
+            delivery_success = False
+            result['failed'] += 1
+
+    if delivery_success:
+        capsule.status = 'SENT'
+
+    try:
+        db.session.commit()
+        result['success'] = delivery_success
+        current_app.logger.info(
+            f"deliver_capsule_now: capsule {capsule_id} — "
+            f"{result['delivered']} sent, {result['failed']} failed"
+        )
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"deliver_capsule_now: commit failed for capsule {capsule_id}: {e}")
+
+    return result
+
+
 def get_delivery_stats():
     """
     Get statistics about capsule deliveries.

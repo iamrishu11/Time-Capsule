@@ -229,3 +229,17 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Video ready notice */
+.video-ready-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #15803d;
+  font-weight: 500;
+}

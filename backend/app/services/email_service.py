@@ -344,6 +344,169 @@ The Time Capsule Team
     return send_email(subject, [user.email], text_body, html_body)
 
 
+def send_guardian_verification_email(guardian, capsule, verify_url):
+    """
+    Send a guardian verification request email.
+
+    The email contains confirm/deny links that route the guardian to the
+    public GuardianVerify page in the frontend.
+
+    Args:
+        guardian: Guardian model instance
+        capsule: Capsule model instance
+        verify_url: Full URL to the frontend GuardianVerify page (includes token)
+    """
+    owner_name = capsule.owner.name if capsule.owner else 'Someone'
+    subject = f"Action Required: Guardian Verification for \"{capsule.title}\""
+
+    text_body = f"""
+Hello {guardian.name},
+
+{owner_name} has designated you as a trusted guardian for their Time Capsule.
+
+You have been asked to verify a capsule release request:
+
+  Capsule: {capsule.title}
+  Created by: {owner_name}
+
+Please visit the link below to confirm or deny this release:
+{verify_url}
+
+This link is unique to you. Please do not share it.
+
+If you were not expecting this email, you can safely ignore it.
+
+Best regards,
+The Time Capsule Team
+"""
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+    .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+    .capsule-box {{ background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0; }}
+    .btn-confirm {{ display: inline-block; padding: 14px 32px; background: #22c55e; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 8px 6px 8px 0; }}
+    .btn-deny   {{ display: inline-block; padding: 14px 32px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 8px 0; }}
+    .note {{ font-size: 13px; color: #666; margin-top: 20px; }}
+    .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 13px; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛡️ Guardian Verification Request</h1>
+      <p>Your trusted decision is needed</p>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{guardian.name}</strong>,</p>
+      <p><strong>{owner_name}</strong> has designated you as a trusted guardian for their Time Capsule and is requesting your verification to release the following capsule:</p>
+
+      <div class="capsule-box">
+        <h3 style="color:#667eea; margin-top:0;">{capsule.title}</h3>
+        <p>Created by: <strong>{owner_name}</strong></p>
+      </div>
+
+      <p>Please click one of the buttons below to record your decision:</p>
+
+      <a href="{verify_url}" class="btn-confirm">Review &amp; Respond</a>
+
+      <p class="note">
+        ⚠️ This link is unique to you — please do not share it.<br>
+        If you were not expecting this email, you can safely ignore it.
+      </p>
+    </div>
+    <div class="footer">
+      <p>Best regards,<br>The Time Capsule Team</p>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+    return send_email(subject, [guardian.email], text_body, html_body)
+
+
+def send_guardian_response_notification(capsule, guardian, status, notes=''):
+    """
+    Notify the capsule owner that a guardian has responded.
+
+    Args:
+        capsule: Capsule model instance
+        guardian: Guardian model instance
+        status: 'CONFIRMED' or 'DENIED'
+        notes: Optional notes from the guardian
+    """
+    owner = capsule.owner
+    if not owner:
+        return False
+
+    action_word = 'confirmed' if status == 'CONFIRMED' else 'denied'
+    action_emoji = '✅' if status == 'CONFIRMED' else '❌'
+    subject = f"Guardian {action_word.capitalize()}: {capsule.title}"
+
+    text_body = f"""
+Hello {owner.name},
+
+Your guardian {guardian.name} has {action_word} the release of your time capsule "{capsule.title}".
+
+Guardian: {guardian.name} ({guardian.email})
+Decision: {status}
+{f'Notes: {notes}' if notes else ''}
+
+Log in to your Time Capsule account to view the full audit log.
+
+Best regards,
+The Time Capsule Team
+"""
+
+    status_color = '#22c55e' if status == 'CONFIRMED' else '#ef4444'
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+    .header {{ background: {status_color}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+    .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+    .decision-box {{ background: white; border-left: 4px solid {status_color}; padding: 15px 20px; margin: 15px 0; border-radius: 0 8px 8px 0; }}
+    .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 13px; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>{action_emoji} Guardian Response Received</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{owner.name}</strong>,</p>
+      <p>Your guardian <strong>{guardian.name}</strong> has responded to the verification request for <strong>"{capsule.title}"</strong>.</p>
+
+      <div class="decision-box">
+        <p><strong>Guardian:</strong> {guardian.name} ({guardian.email})</p>
+        <p><strong>Decision:</strong> <span style="color:{status_color}; font-weight:bold;">{status}</span></p>
+        {f'<p><strong>Notes:</strong> {notes}</p>' if notes else ''}
+      </div>
+
+      <p>Log in to your account to view the full audit trail and current verification status.</p>
+    </div>
+    <div class="footer">
+      <p>Best regards,<br>The Time Capsule Team</p>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+    return send_email(subject, [owner.email], text_body, html_body)
+
+
 def send_test_email(recipient_email):
     """
     Send a test email to verify email configuration.
