@@ -63,6 +63,40 @@ def decode_token(token):
     return payload
 
 
+def generate_attachment_token(attachment_id, capsule_id, expires=None):
+    """
+    Generate a signed token for public attachment access.
+    """
+    if expires is None:
+        expires = current_app.config.get('ATTACHMENT_TOKEN_EXPIRES', timedelta(days=7))
+
+    payload = {
+        'type': 'attachment',
+        'attachment_id': attachment_id,
+        'capsule_id': capsule_id,
+        'iat': datetime.utcnow(),
+        'exp': datetime.utcnow() + expires,
+    }
+
+    token = jwt.encode(
+        payload,
+        current_app.config['JWT_SECRET_KEY'],
+        algorithm='HS256'
+    )
+
+    return token
+
+
+def decode_attachment_token(token):
+    """
+    Decode and verify a signed attachment access token.
+    """
+    payload = decode_token(token)
+    if payload.get('type') != 'attachment':
+        raise jwt.InvalidTokenError('Invalid attachment token type')
+    return payload
+
+
 def token_required(f):
     """
     Decorator to protect routes with JWT authentication.

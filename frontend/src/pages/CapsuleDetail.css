@@ -297,8 +297,10 @@
 
 .attachment-item {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
   padding: var(--spacing-md);
   background-color: var(--color-bg);
   border-radius: var(--radius-md);
@@ -318,6 +320,18 @@
 .attachment-meta {
   font-size: var(--font-size-sm);
   color: var(--color-text-light);
+}
+
+.attachment-actions {
+  display: flex;
+  gap: var(--spacing-2xs);
+  align-items: center;
+}
+
+.attachment-video {
+  border-radius: var(--radius-sm);
+  max-width: 100%;
+  margin-top: var(--spacing-xs);
 }
 
 .btn-icon {

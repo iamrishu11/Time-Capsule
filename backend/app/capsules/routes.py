@@ -6,12 +6,13 @@ Capsule messages are encrypted before storage and decrypted on retrieval.
 """
 
 import os
+import jwt
 from datetime import datetime
-from flask import request, jsonify, g, current_app
+from flask import request, jsonify, g, current_app, send_file
 from werkzeug.utils import secure_filename
 
 from app.capsules import capsules_bp
-from app.auth.utils import token_required
+from app.auth.utils import token_required, decode_attachment_token
 from app.extensions import db
 from app.models import Capsule, Recipient, CapsuleRecipient, Attachment, Guardian, GuardianVerificationRequest
 from app.security.encryption import encrypt_text, decrypt_text
@@ -258,7 +259,8 @@ def get_capsule(capsule_id):
             'original_filename': att.original_filename,
             'mime_type': att.mime_type,
             'size_bytes': att.size_bytes,
-            'created_at': att.created_at.isoformat()
+            'created_at': att.created_at.isoformat(),
+            'url': f"{request.host_url.rstrip('/')}/api/capsules/{capsule.id}/attachments/{att.id}"
         })
 
     # Get guardians
@@ -657,10 +659,130 @@ def get_attachments(capsule_id):
             'original_filename': att.original_filename,
             'mime_type': att.mime_type,
             'size_bytes': att.size_bytes,
-            'created_at': att.created_at.isoformat()
+            'created_at': att.created_at.isoformat(),
+            'url': f"{request.host_url.rstrip('/')}/api/capsules/{capsule.id}/attachments/{att.id}"
         })
-    
+
     return jsonify(attachments), 200
+
+
+@capsules_bp.route('/<int:capsule_id>/attachments/<int:attachment_id>/public', methods=['GET'])
+def public_download_attachment(capsule_id, attachment_id):
+    """
+    Public download endpoint for capsule attachments using a signed token.
+
+    Returns:
+        200: File content
+        401: Missing or invalid token
+        403: Forbidden or mismatch
+        404: Capsule or attachment not found
+    """
+    token = request.args.get('token')
+    if not token:
+        return jsonify({
+            'error': 'Authentication required',
+            'message': 'Missing attachment access token'
+        }), 401
+
+    try:
+        payload = decode_attachment_token(token)
+    except jwt.ExpiredSignatureError:
+        return jsonify({
+            'error': 'Token expired',
+            'message': 'The attachment link has expired'
+        }), 401
+    except jwt.InvalidTokenError as e:
+        return jsonify({
+            'error': 'Invalid token',
+            'message': str(e)
+        }), 401
+
+    if payload.get('capsule_id') != capsule_id or payload.get('attachment_id') != attachment_id:
+        return jsonify({
+            'error': 'Forbidden',
+            'message': 'Token does not match this attachment'
+        }), 403
+
+    capsule = Capsule.query.get(capsule_id)
+    if not capsule:
+        return jsonify({
+            'error': 'Not found',
+            'message': 'Capsule not found'
+        }), 404
+
+    attachment = Attachment.query.filter_by(
+        id=attachment_id,
+        capsule_id=capsule_id
+    ).first()
+
+    if not attachment:
+        return jsonify({
+            'error': 'Not found',
+            'message': 'Attachment not found'
+        }), 404
+
+    if not os.path.exists(attachment.storage_path):
+        return jsonify({
+            'error': 'Not found',
+            'message': 'Attachment file missing on server'
+        }), 404
+
+    return send_file(
+        attachment.storage_path,
+        mimetype=attachment.mime_type or 'application/octet-stream',
+        as_attachment=False,
+        download_name=attachment.original_filename
+    )
+
+
+@capsules_bp.route('/<int:capsule_id>/attachments/<int:attachment_id>', methods=['GET'])
+@token_required
+def download_attachment(capsule_id, attachment_id):
+    """
+    Download an attachment file for a capsule.
+
+    Returns:
+        200: File content
+        403: Not authorized
+        404: Capsule or attachment not found
+    """
+    capsule = Capsule.query.get(capsule_id)
+    if not capsule:
+        return jsonify({
+            'error': 'Not found',
+            'message': 'Capsule not found'
+        }), 404
+
+    # Check ownership
+    if capsule.owner_id != g.current_user.id:
+        return jsonify({
+            'error': 'Forbidden',
+            'message': 'You do not have access to this capsule'
+        }), 403
+
+    attachment = Attachment.query.filter_by(
+        id=attachment_id,
+        capsule_id=capsule_id
+    ).first()
+
+    if not attachment:
+        return jsonify({
+            'error': 'Not found',
+            'message': 'Attachment not found'
+        }), 404
+
+    if not os.path.exists(attachment.storage_path):
+        return jsonify({
+            'error': 'Not found',
+            'message': 'Attachment file missing on server'
+        }), 404
+
+    return send_file(
+        attachment.storage_path,
+        mimetype=attachment.mime_type or 'application/octet-stream',
+        as_attachment=False,
+        download_name=attachment.original_filename
+    )
 
 
 @capsules_bp.route('/<int:capsule_id>/attachments/<int:attachment_id>', methods=['DELETE'])
