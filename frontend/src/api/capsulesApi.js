@@ -8,6 +8,23 @@
 import apiClient from './apiClient';
 
 /**
+ * Download an attachment file for a capsule
+ * 
+ * @param {number} capsuleId - Capsule ID
+ * @param {number} attachmentId - Attachment ID
+ * @returns {Promise<Blob>} File blob
+ */
+export const downloadAttachmentFile = async (capsuleId, attachmentId) => {
+  const response = await apiClient.get(
+    `/api/capsules/${capsuleId}/attachments/${attachmentId}`,
+    {
+      responseType: 'blob',
+    }
+  );
+  return response.data;
+};
+
+/**
  * Create a new time capsule
  * 
  * @param {Object} data - Capsule data

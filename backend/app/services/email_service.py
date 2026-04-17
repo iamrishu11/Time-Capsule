@@ -10,6 +10,7 @@ from threading import Thread
 from flask import current_app, render_template_string
 from flask_mail import Message
 
+from app.auth.utils import generate_attachment_token
 from app.extensions import mail
 
 
@@ -152,7 +153,14 @@ def send_capsule_delivery_email(capsule, recipient, decrypted_message):
     """
     subject = f"Time Capsule: {capsule.title}"
     owner_name = capsule.owner.name if capsule.owner else "Someone special"
-    
+
+    app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
+    attachment_links = []
+    for att in capsule.attachments:
+        token = generate_attachment_token(att.id, capsule.id)
+        view_url = f"{app_url}/api/capsules/{capsule.id}/attachments/{att.id}/public?token={token}"
+        attachment_links.append((att.original_filename, view_url))
+
     text_body = f"""
 Dear {recipient.name},
 
@@ -163,54 +171,81 @@ Title: {capsule.title}
 Message:
 {decrypted_message}
 
----
-This message was created on {capsule.created_at.strftime('%B %d, %Y')} and scheduled to be delivered to you on this date.
-
-With love and memories,
-The Time Capsule Team
+Created on: {capsule.created_at.strftime('%B %d, %Y')}
+Delivered on: {capsule.release_at.strftime('%B %d, %Y') if capsule.release_at else 'Now'}
 """
-    
+
+    if attachment_links:
+        attachments_text = '\n'.join([f"- {name}: {url}" for name, url in attachment_links])
+        text_body += f"\nAttachments:\n{attachments_text}\n"
+
+    text_body += f"\nVisit {app_url} to explore your Time Capsule and preserve the memory forever.\n\nWith love and memories,\nThe Time Capsule Team\n"
+
+    attachments_html = ''.join([
+        f"<li><span>{name}</span><a href=\"{url}\" target=\"_blank\" rel=\"noopener noreferrer\">View</a></li>"
+        for name, url in attachment_links
+    ])
+
     html_body = f"""
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .capsule-content {{ background: #fff; padding: 30px; border: 2px solid #667eea; border-radius: 10px; margin: 20px 0; }}
-        .message {{ background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; margin: 15px 0; white-space: pre-wrap; }}
-        .meta {{ color: #666; font-size: 14px; margin-top: 20px; }}
-        .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 14px; }}
+        body {{ margin: 0; padding: 0; background: #f2f5fb; font-family: 'Helvetica Neue', Arial, sans-serif; color: #252f3f; }}
+        .container {{ width: 100%; max-width: 620px; margin: 0 auto; padding: 24px; }}
+        .card {{ background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08); }}
+        .header {{ background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #ffffff; padding: 32px 28px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 28px; line-height: 1.1; }}
+        .header p {{ margin: 12px auto 0; font-size: 16px; max-width: 420px; color: rgba(255, 255, 255, 0.9); }}
+        .body {{ padding: 28px; }}
+        .greeting {{ margin: 0 0 20px; font-size: 16px; color: #475569; }}
+        .title-badge {{ display: inline-block; background: #eef2ff; color: #4338ca; padding: 10px 16px; border-radius: 999px; font-weight: 600; margin-bottom: 20px; }}
+        .message-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; padding: 22px; color: #334155; line-height: 1.65; white-space: pre-wrap; }}
+        .meta {{ margin: 24px 0 0; color: #64748b; font-size: 14px; line-height: 1.75; }}
+        .attachments {{ margin-top: 30px; }}
+        .attachments h3 {{ margin: 0 0 12px; font-size: 16px; color: #111827; }}
+        .attachments ul {{ list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }}
+        .attachments li {{ display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; }}
+        .attachments span {{ color: #0f172a; font-size: 14px; }}
+        .attachments a {{ color: #4f46e5; text-decoration: none; font-weight: 700; }}
+        .footer {{ padding: 0 28px 28px; text-align: center; color: #64748b; font-size: 13px; }}
+        .footer p {{ margin: 0; }}
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>You've Received a Time Capsule!</h1>
-            <p>A message from the past, delivered to your present</p>
-        </div>
-        <div class="capsule-content">
-            <p>Dear <strong>{recipient.name}</strong>,</p>
-            <p>You have received a Time Capsule from <strong>{owner_name}</strong>.</p>
-            
-            <h2 style="color: #667eea;">{capsule.title}</h2>
-            
-            <div class="message">{decrypted_message}</div>
-            
-            <div class="meta">
-                <p>📅 Created on: {capsule.created_at.strftime('%B %d, %Y')}</p>
-                <p>⏰ Delivered on: {capsule.release_at.strftime('%B %d, %Y') if capsule.release_at else 'Now'}</p>
+        <div class="card">
+            <div class="header">
+                <h1>You have a new Time Capsule</h1>
+                <p>A thoughtful message has arrived from someone who cares about you.</p>
+            </div>
+            <div class="body">
+                <p class="greeting">Dear <strong>{recipient.name}</strong>,</p>
+                <p>You've received a Time Capsule from <strong>{owner_name}</strong>. We hope this message brings warmth and meaning to your day.</p>
+
+                <div class="title-badge">{capsule.title}</div>
+
+                <div class="message-box">{decrypted_message}</div>
+
+                <div class="meta">
+                    <p>Created on: {capsule.created_at.strftime('%B %d, %Y')}</p>
+                    <p>Delivered on: {capsule.release_at.strftime('%B %d, %Y') if capsule.release_at else 'Now'}</p>
+                </div>
+
+                {f'<div class="attachments"><h3>Attachments</h3><ul>{attachments_html}</ul></div>' if attachment_links else ''}
             </div>
         </div>
         <div class="footer">
+            <p>Thank you for using Time Capsule.</p>
             <p>With love and memories,<br>The Time Capsule Team</p>
         </div>
     </div>
 </body>
 </html>
 """
-    
+
     return send_email(subject, [recipient.email], text_body, html_body)
 
 

@@ -39,6 +39,8 @@ class BaseConfig:
     # CORS settings
     CORS_HEADERS = 'Content-Type'
     FRONTEND_URLS = os.environ.get('FRONTEND_URLS', 'http://localhost:3000,http://localhost:5173')
+    APP_URL = os.environ.get('APP_URL', 'http://localhost:5000')
+    ATTACHMENT_TOKEN_EXPIRES = timedelta(days=7)
     
     # Email Configuration
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')

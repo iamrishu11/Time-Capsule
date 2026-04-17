@@ -18,6 +18,7 @@ import {
   getAttachments,
   uploadAttachment,
   deleteAttachment,
+  downloadAttachmentFile,
   requestGuardianVerification,
   getGuardianVerifications,
 } from '../api/capsulesApi';
@@ -50,6 +51,10 @@ function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function isVideoAttachment(mimeType) {
+  return typeof mimeType === 'string' && mimeType.startsWith('video/');
 }
 
 // ─── component ─────────────────────────────────────────────────────────────
@@ -173,6 +178,25 @@ function CapsuleDetail() {
       setUploadError('Video upload failed. Please try again.');
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleViewAttachment(att) {
+    setUploadError('');
+
+    try {
+      const blob = await downloadAttachmentFile(id, att.id);
+      const blobUrl = URL.createObjectURL(blob);
+
+      const newWindow = window.open(blobUrl, '_blank');
+      if (!newWindow) {
+        URL.revokeObjectURL(blobUrl);
+        throw new Error('Unable to open attachment in a new tab. Please allow pop-ups for this site.');
+      }
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+    } catch (err) {
+      setUploadError(err.response?.data?.message || err.message || 'Failed to open attachment.');
     }
   }
 
@@ -390,10 +414,19 @@ function CapsuleDetail() {
                     <span className="attachment-meta">
                       {formatFileSize(att.size_bytes)} &bull; {att.mime_type}
                     </span>
+                    </div>
+                  <div className="attachment-actions">
+                    <button
+                      className="btn btn-secondary btn-small"
+                      type="button"
+                      onClick={() => handleViewAttachment(att)}
+                    >
+                      View
+                    </button>
+                    {canEdit && (
+                      <button className="btn btn-danger btn-icon" onClick={() => handleDeleteAttachment(att.id)} title="Delete">✕</button>
+                    )}
                   </div>
-                  {canEdit && (
-                    <button className="btn btn-danger btn-icon" onClick={() => handleDeleteAttachment(att.id)} title="Delete">✕</button>
-                  )}
                 </div>
               ))}
             </div>
